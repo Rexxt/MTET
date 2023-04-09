@@ -71,6 +71,19 @@ end
 res = require "modules.res"
 fonts = require "modules.fonts"
 
+local blockSize = 20
+
+local TinyParticleSystem = require 'modules.psys'
+local LineParticles = TinyParticleSystem(res.img.blocks.garbage)
+LineParticles.particle_size = 0.25
+LineParticles.particle_speed = 500
+--LineParticles:setParticleRotationRange(math.pi/4, 3*math.pi/4)
+LineParticles.particle_update = function(part, dt)
+    part.x = part.x + part.speed*part.mod_x*dt*(1 - part.life/part.expiration)*2
+    part.y = part.y + part.speed*part.mod_y*dt*(1 - part.life/part.expiration)*2
+    part.size = (1 - part.life/part.expiration)/4
+end
+
 menu = {
     options = {
         {'Play', 'modeSelect'},
@@ -122,6 +135,7 @@ function spawnNewPiece()
     game.currentPiece.orientation = 1
     game.currentPiece.active = true
     game.hold.available = true
+    game.currentPiece.resets[1] = 0
     -- ihs
     if love.keyboard.isDown(keys.hold) then
         holdPiece(true)
@@ -183,6 +197,8 @@ function holdPiece(init)
         game.currentPiece.orientation = 1
         game.currentPiece.active = true
         game.gravityDelay[1] = 0
+        game.lockDelay[1] = 0
+        game.currentPiece.resets[1] = 0
 
         -- check if blocked
         if not canPieceMove(game.currentPiece.pos[1], game.currentPiece.pos[2], game.currentPiece.orientation) then
@@ -213,15 +229,19 @@ function kickPiece(rotDirection, endRot)
     elseif canPieceMove(testPos[1] - rotDirection, testPos[2] + 1, endRot) then
         res.playSound(res.sounds.bottom, config.sfxVolume)
         game.currentPiece.pos[1] = testPos[1] - rotDirection
+        game.currentPiece.pos[2] = testPos[2] + 1
         game.currentPiece.orientation = endRot
     elseif canPieceMove(testPos[1] - rotDirection, testPos[2], endRot) then
         res.playSound(res.sounds.bottom, config.sfxVolume)
         game.currentPiece.pos[1] = testPos[1] - rotDirection
-        game.currentPiece.pos[2] = testPos[2] + 1
         game.currentPiece.orientation = endRot
     elseif canPieceMove(testPos[1], testPos[2] - 1, endRot) then
         res.playSound(res.sounds.bottom, config.sfxVolume)
         game.currentPiece.pos[2] = testPos[2] - 1
+        game.currentPiece.orientation = endRot
+    elseif canPieceMove(testPos[1], testPos[2] - 2, endRot) and game.currentPiece.id == 1 then
+        res.playSound(res.sounds.bottom, config.sfxVolume)
+        game.currentPiece.pos[2] = testPos[2] - 2
         game.currentPiece.orientation = endRot
     end
 end
@@ -250,6 +270,10 @@ function love.keypressed(key)
                         kickPiece(1, testRot)
                     end
                 end
+                if game.currentPiece.previouslyGrounded then
+                    game.currentPiece.resets[1] = game.currentPiece.resets[1] + 1
+                    game.lockDelay[1] = game.lockDelay[2] * (game.currentPiece.resets[1]/game.currentPiece.resets[2])
+                end
             end
             if key == keys.rotateCCW then
                 res.playSound(res.sounds.rotate, config.sfxVolume)
@@ -269,6 +293,10 @@ function love.keypressed(key)
                     else
                         kickPiece(-1, testRot)
                     end
+                end
+                if game.currentPiece.previouslyGrounded then
+                    game.currentPiece.resets[1] = game.currentPiece.resets[1] + 1
+                    game.lockDelay[1] = game.lockDelay[2] * (game.currentPiece.resets[1]/game.currentPiece.resets[2])
                 end
             end
             if key == keys.hardDrop then
@@ -300,6 +328,10 @@ function love.keypressed(key)
                     res.playSound(res.sounds.move, config.sfxVolume)
                     game.currentPiece.pos[1] = testPos[1]
                 end
+                if game.currentPiece.previouslyGrounded then
+                    game.currentPiece.resets[1] = game.currentPiece.resets[1] + 1
+                    game.lockDelay[1] = game.lockDelay[2] * (game.currentPiece.resets[1]/game.currentPiece.resets[2])
+                end
             end
             if key == keys.moveRight then
                 testPos[1] = game.currentPiece.pos[1] + 1
@@ -307,6 +339,10 @@ function love.keypressed(key)
                 if test then
                     res.playSound(res.sounds.move, config.sfxVolume)
                     game.currentPiece.pos[1] = testPos[1]
+                end
+                if game.currentPiece.previouslyGrounded then
+                    game.currentPiece.resets[1] = game.currentPiece.resets[1] + 1
+                    game.lockDelay[1] = game.lockDelay[2] * (game.currentPiece.resets[1]/game.currentPiece.resets[2])
                 end
             end
             if key == keys.hold then
@@ -367,6 +403,7 @@ function clearLines(lines)
         table.insert(game.grid.grid, 1, {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '})
     end
     res.playSound(res.sounds.fall, config.sfxVolume)
+    game.linesToClear = {}
 end
 
 function placeToGrid(piece)
@@ -395,8 +432,6 @@ function placeToGrid(piece)
             end
         end
     end
-    -- check for full lines
-    local full_lines = {}
     for y = 1, game.grid.yCount do
         local full = true
         for x = 1, game.grid.xCount do
@@ -406,17 +441,22 @@ function placeToGrid(piece)
             end
         end
         if full then
-            table.insert(full_lines, y)
+            table.insert(game.linesToClear, y)
+            for x = 1, game.grid.xCount do
+                LineParticles.image = res.img.blocks[game.grid.grid[y][x]]
+                for i = 1,5 do
+                    LineParticles:spawnParticle((x - 1) * blockSize + 10, (y - 1)*blockSize + 10)
+                end
+            end
         end
     end
-    if #full_lines > 0 then
+    if #game.linesToClear > 0 then
         res.playSound(res.sounds.erase, config.sfxVolume)
-        game.lines.lastClearLineCount = #full_lines
+        game.lines.lastClearLineCount = #game.linesToClear
         game.lines.lastClearTime = love.timer.getTime()
-        game.lines.total = game.lines.total + #full_lines
-        game.lines.individual[math.min(#full_lines, 5)] = game.lines.individual[math.min(#full_lines, 5)] + 1
-        game.points[1] = game.points[1] + 2^(#full_lines-1)
-        clearLines(full_lines)
+        game.lines.total = game.lines.total + #game.linesToClear
+        game.lines.individual[math.min(#game.linesToClear, 5)] = game.lines.individual[math.min(#game.linesToClear, 5)] + 1
+        game.points[1] = game.points[1] + 2^(#game.linesToClear-1)
     end
 end
 
@@ -437,6 +477,7 @@ end
 
 function love.update(dt)
     timer = timer + dt
+    LineParticles:update(dt)
     if scene[1] == "game" and not game.gameOver then
         game.timer = game.timer + dt
 
@@ -478,6 +519,7 @@ function love.update(dt)
                 game.DASDirection = 0
                 game.DAS[1] = 0
             end
+
             if game.currentPiece.active then
                 -- automove
                 if game.DASDirection ~= 0 and game.DAS[1] >= game.DAS[2] then
@@ -493,6 +535,7 @@ function love.update(dt)
                         end
                     end
                 end
+
                 -- gravity
                 game.gravityDelay[2] = game.curves[game.mode].gravityDelay(game.level, game.points[1], game.points[2])
                 local testY = game.currentPiece.pos[2] + 1
@@ -514,7 +557,10 @@ function love.update(dt)
                             game.gravityDelay[1] = 0
                             game.lockDelay[1] = 0
                         end
-                        print(game.currentPiece.pos[2])
+                        --print(game.currentPiece.pos[2])
+                    end
+                    if not canPieceMove(game.currentPiece.pos[1], game.currentPiece.pos[2] + 1, game.currentPiece.orientation) then
+                        game.gravityDelay[1] = 0
                     end
                 else
                     -- grounded piece
@@ -530,6 +576,12 @@ function love.update(dt)
                         game.currentPiece.active = false
                         game.lockDelay[1] = 0
                     end
+                end
+            elseif #game.linesToClear > 0 then
+                game.lineClearDelay[1] = game.lineClearDelay[1] + dt
+                if game.lineClearDelay[1] >= game.lineClearDelay[2] then
+                    clearLines(game.linesToClear)
+                    game.lineClearDelay[1] = 0
                 end
             else
                 -- entry delay
@@ -561,7 +613,6 @@ end
 
 function love.draw()
     if scene[1] == "game" then
-        local blockSize = 20
         local boardX = math.floor(love.graphics.getWidth()/2 - blockSize*game.grid.xCount/2)
         local boardY = math.floor(love.graphics.getHeight()/2 - blockSize*(game.grid.yCount)/2)
 
@@ -592,9 +643,11 @@ function love.draw()
         end
 
         for y = 3, 22 do
-            for x = 1, game.grid.xCount do
-                local block = game.grid.grid[y][x]
-                drawBlock(true, block, x, y)
+            if not table.contains(game.linesToClear, y) then
+                for x = 1, game.grid.xCount do
+                    local block = game.grid.grid[y][x]
+                    drawBlock(true, block, x, y)
+                end
             end
         end
 
@@ -622,7 +675,11 @@ function love.draw()
             for y = 1, #game.pieces[game.currentPiece.id][game.currentPiece.orientation] do
                 for x = 1, #game.pieces[game.currentPiece.id][game.currentPiece.orientation][y] do
                     local block = game.pieces[game.currentPiece.id][game.currentPiece.orientation][y][x]
-                    drawBlock(false, block, x + game.currentPiece.pos[1], y + game.currentPiece.pos[2] + game.gravityDelay[1]/game.gravityDelay[2], game.lockDelay[1]/game.lockDelay[2])
+                    if game.gravityDelay[2] > 0 then
+                        drawBlock(false, block, x + game.currentPiece.pos[1], y + game.currentPiece.pos[2] + game.gravityDelay[1]/game.gravityDelay[2], game.lockDelay[1]/game.lockDelay[2])
+                    else
+                        drawBlock(false, block, x + game.currentPiece.pos[1], y + game.currentPiece.pos[2], game.lockDelay[1]/game.lockDelay[2])
+                    end
                 end
             end
         end
@@ -706,6 +763,12 @@ function love.draw()
         love.graphics.setFont(fonts.gameplayDisplayNumbers)
         love.graphics.printf(game.level, rightDisplayX, boardY + blockSize * 2 + 96, 50, 'left')
 
+        -- lock delay/resets display
+        love.graphics.setColor(1,1,1)
+        love.graphics.rectangle('fill', boardX, boardY + 23*blockSize, game.grid.xCount*blockSize*(1-game.lockDelay[1]/game.lockDelay[2]), blockSize/2)
+        love.graphics.setColor(0.7, 0, 0)
+        love.graphics.rectangle('line', boardX, boardY + 23*blockSize, game.grid.xCount*blockSize*(1-game.currentPiece.resets[1]/game.currentPiece.resets[2]), blockSize/2)
+
         local leftDisplayWidth = 200
         local leftDisplayX = boardX - leftDisplayWidth - 10
 
@@ -737,6 +800,9 @@ function love.draw()
         love.graphics.printf('SPAWN TIME', leftDisplayX, boardY + blockSize * 2 + 106, leftDisplayWidth, 'right')
         love.graphics.setFont(fonts.gameplayDisplayNumbers)
         love.graphics.printf(game.spawnDelay[2]*1000 .. 'ms', leftDisplayX, boardY + blockSize * 2 + 134, leftDisplayWidth, 'right')
+
+        -- particles
+        LineParticles:draw(boardX, boardY)
 
         -- game over stats
         if game.gameOver then

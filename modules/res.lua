@@ -8,7 +8,6 @@ return {
         blocks = {
             garbage = love.graphics.newImage("res/img/garbage.png"),
             ghost = love.graphics.newImage("res/img/ghost.png"),
-            g = love.graphics.newImage("res/img/garbage.png"),
             i = love.graphics.newImage("res/img/I.png"),
             j = love.graphics.newImage("res/img/J.png"),
             l = love.graphics.newImage("res/img/L.png"),
