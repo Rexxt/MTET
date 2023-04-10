@@ -11,13 +11,13 @@ return {
         },
         rush = {
             display = 'RUSH',
-            tagline = 'Get ready for high speed stacking! Think you can make it.',
+            tagline = 'Get ready for high speed stacking! Think you can make it?',
             difficulty = 3, -- 0-5
             levels = 10,
         },
         doom = {
             display = 'DOOM',
-            tagline = 'NIGHTMARENIGHTMARENIGHTMARENIGHTMARENIGHTMARENIGHTMARENIGHTMARENIGHTMARENIGHTMARENIGHTMARENIGHTMARE',
+            tagline = 'Are you ready for intense maximum gravity stacking?',
             difficulty = 4, -- 0-5
             levels = 10,
         },
@@ -30,6 +30,7 @@ return {
     level = 0,
     levelLock = 0, -- pieces since level was locked
     points = {0, 200}, -- {current, required}
+    gradePoints = 0, -- grade points go up at the same time as points, but decrease at a rate of {(level+1)/2} points per second.
     pieces = 0,
     lastPieceTime = 0,
     pps = 0,
@@ -74,55 +75,76 @@ return {
             points = {200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 1900},
             gravityDelay = function(level, points, maxPoints)
                 local netLevel = level + points/maxPoints
-                    if netLevel <= 0.5 then return 1
-                elseif netLevel <= 0.75 then return 0.85
-                elseif netLevel <= 1 then return 0.7
-                elseif netLevel <= 1.25 then return 0.65
-                elseif netLevel <= 1.5 then return 0.6
-                elseif netLevel <= 1.75 then return 0.55
-                elseif netLevel <= 2 then return 0.5
-                elseif netLevel <= 2.25 then return 0.4
-                elseif netLevel <= 2.5 then return 0.3
-                elseif netLevel <= 3 then return 0.7
-                elseif netLevel <= 3.25 then return 0.6
-                elseif netLevel <= 3.5 then return 0.5
-                elseif netLevel <= 3.75 then return 0.4
-                elseif netLevel <= 4 then return 0.3
-                elseif netLevel <= 4.125 then return 0.25
-                elseif netLevel <= 4.5 then return 0.1
-                elseif netLevel <= 4.75 then return 0.05
-                elseif netLevel <= 5 then return 1/60
+                    if netLevel < 0.5 then return 1
+                elseif netLevel < 0.75 then return 0.85
+                elseif netLevel < 1 then return 0.7
+                elseif netLevel < 1.25 then return 0.65
+                elseif netLevel < 1.5 then return 0.6
+                elseif netLevel < 1.75 then return 0.55
+                elseif netLevel < 2 then return 0.5
+                elseif netLevel < 2.25 then return 0.4
+                elseif netLevel < 2.5 then return 0.3
+                elseif netLevel < 3 then return 0.7
+                elseif netLevel < 3.25 then return 0.6
+                elseif netLevel < 3.5 then return 0.5
+                elseif netLevel < 3.75 then return 0.4
+                elseif netLevel < 4 then return 0.3
+                elseif netLevel < 4.125 then return 0.25
+                elseif netLevel < 4.5 then return 0.1
+                elseif netLevel < 4.75 then return 0.05
+                elseif netLevel < 5 then return 1/60
                 else return 0 end
             end,
             spawnDelay = function(level, points, maxPoints)
                 return 0.3 - level/(game.modeFields[game.mode].levels)*0.2
+            end,
+            lockDelay = function(level, points, maxPoints)
+                    if level < 5 then return 0.5
+                elseif level < 6 then return 0.45
+                elseif level < 7 then return 0.4
+                elseif level < 8 then return 0.35
+                else return 1/3 end
+            end,
+            lineClearDelay = function(level, points, maxPoints)
+                return 0.5 - level/(game.modeFields[game.mode].levels)*0.4
             end,
         },
         rush = {
             points = {350, 500, 650, 800, 1000, 1200, 1500, 1800, 1900, 2000},
             gravityDelay = function(level, points, maxPoints)
                 local netLevel = level + points/maxPoints
-                    if netLevel <= 0.5 then return 1/30
-                elseif netLevel <= 0.75 then return 1/60
-                elseif netLevel <= 1 then return 1/70
-                elseif netLevel <= 1.25 then return 1/80
-                elseif netLevel <= 1.5 then return 1/90
-                elseif netLevel <= 1.75 then return 1/100
-                elseif netLevel <= 2 then return 1/150
-                elseif netLevel <= 2.25 then return 1/30
-                elseif netLevel <= 2.5 then return 0.3
-                elseif netLevel <= 3 then return 0.7
-                elseif netLevel <= 3.25 then return 0.6
-                elseif netLevel <= 3.5 then return 0.5
-                elseif netLevel <= 3.75 then return 0.4
-                elseif netLevel <= 4 then return 0.3
-                elseif netLevel <= 4.125 then return 0.25
-                elseif netLevel <= 4.5 then return 0.1
-                elseif netLevel <= 4.75 then return 0.05
-                elseif netLevel <= 5 then return 1/60
+                    if netLevel < 0.5 then return 1/30
+                elseif netLevel < 0.75 then return 1/60
+                elseif netLevel < 1 then return 1/70
+                elseif netLevel < 1.25 then return 1/80
+                elseif netLevel < 1.5 then return 1/90
+                elseif netLevel < 1.75 then return 1/100
+                elseif netLevel < 2 then return 1/150
+                elseif netLevel < 2.25 then return 1/30
+                elseif netLevel < 2.5 then return 0.3
+                elseif netLevel < 3 then return 0.7
+                elseif netLevel < 3.25 then return 0.6
+                elseif netLevel < 3.5 then return 0.5
+                elseif netLevel < 3.75 then return 0.4
+                elseif netLevel < 4 then return 0.3
+                elseif netLevel < 4.125 then return 0.25
+                elseif netLevel < 4.5 then return 0.1
+                elseif netLevel < 4.75 then return 0.05
+                elseif netLevel < 5 then return 1/60
                 else return 0 end
             end,
             spawnDelay = function(level, points, maxPoints)
+                return 0.3 - level/(game.modeFields[game.mode].levels)*0.2
+            end,
+            lockDelay = function(level, points, maxPoints)
+                    if level < 5 then return 0.5
+                elseif level < 6 then return 0.45
+                elseif level < 7 then return 0.4
+                elseif level < 8 then return 0.35
+                elseif level < 9 then return 0.3
+                else return 0.15 end
+            end,
+            lineClearDelay = function(level, points, maxPoints)
                 return 0.3 - level/(game.modeFields[game.mode].levels)*0.2
             end,
         }

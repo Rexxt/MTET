@@ -117,6 +117,9 @@ function canPieceMove(tx, ty, orientation)
                 if (ty + y) > game.grid.yCount or (tx + x) > game.grid.xCount then
                     return false
                 end
+                if not game.grid.grid[ty + y] then
+                    return false
+                end
                 if game.grid.grid[ty + y][tx + x] ~= ' ' then
                     return false
                 end
@@ -135,6 +138,7 @@ function spawnNewPiece()
     game.currentPiece.orientation = 1
     game.currentPiece.active = true
     game.hold.available = true
+    game.lockDelay[1] = 0
     game.currentPiece.resets[1] = 0
     -- ihs
     if love.keyboard.isDown(keys.hold) then
@@ -307,7 +311,6 @@ function love.keypressed(key)
                 end
                 placeToGrid(game.currentPiece)
                 game.currentPiece.active = false
-                game.lockDelay[1] = 0
             end
             --[[if key == 'up' then
                 game.currentPiece.pos[2] = game.currentPiece.pos[2] - 1
@@ -414,6 +417,7 @@ function placeToGrid(piece)
     end
     game.lastPieceTime = love.timer.getTime()
     game.points[1] = game.points[1] + math.ceil(math.max(1, game.pps*2))
+    game.gradePoints = game.gradePoints + math.ceil(math.max(1, game.pps*2))
     -- level lock
     if game.points[1] >= game.points[2] then
         game.points[1] = game.points[2] - 1
@@ -457,6 +461,7 @@ function placeToGrid(piece)
         game.lines.total = game.lines.total + #game.linesToClear
         game.lines.individual[math.min(#game.linesToClear, 5)] = game.lines.individual[math.min(#game.linesToClear, 5)] + 1
         game.points[1] = game.points[1] + 2^(#game.linesToClear-1)
+        game.gradePoints = game.gradePoints + 2^(#game.linesToClear-1)
     end
 end
 
@@ -486,10 +491,14 @@ function love.update(dt)
             game.randomizer.generate(14 - #game.randomizer.queue)
         end
         
+        -- grade
+        game.gradePoints = math.max(game.gradePoints - (game.level+1)*dt/2, 0)
+
         -- level
         game.points[2] = game.curves[game.mode].points[game.level + 1]
         if game.points[1] >= game.points[2] then
             game.points[1] = game.points[1] % game.points[2]
+            game.gradePoints = game.points[1] % game.points[2]
             game.level = game.level + 1
             if game.level < game.modeFields[game.mode].levels then
                 res.playSound(res.sounds.levelup, config.sfxVolume)
@@ -532,12 +541,19 @@ function love.update(dt)
                         if test then
                             res.playSound(res.sounds.move, config.sfxVolume)
                             game.currentPiece.pos[1] = testPos[1]
+                            if game.currentPiece.previouslyGrounded then
+                                game.currentPiece.resets[1] = game.currentPiece.resets[1] + 1
+                                game.lockDelay[1] = game.lockDelay[2] * (game.currentPiece.resets[1]/game.currentPiece.resets[2])
+                            end
                         end
                     end
                 end
 
-                -- gravity
+                game.spawnDelay[2] = game.curves[game.mode].spawnDelay(game.level, game.points[1], game.points[2])
                 game.gravityDelay[2] = game.curves[game.mode].gravityDelay(game.level, game.points[1], game.points[2])
+                game.lockDelay[2] = game.curves[game.mode].lockDelay(game.level, game.points[1], game.points[2])
+                game.lineClearDelay[2] = game.curves[game.mode].lineClearDelay(game.level, game.points[1], game.points[2])
+                -- gravity
                 local testY = game.currentPiece.pos[2] + 1
                 if canPieceMove(game.currentPiece.pos[1], testY, game.currentPiece.orientation) then
                     game.currentPiece.previouslyGrounded = false
@@ -757,11 +773,22 @@ function love.draw()
         love.graphics.setColor(1-game.points[1]/game.points[2], game.points[1]/game.points[2], 0)
         love.graphics.arc('fill', 'pie', rightDisplayX + 55, boardY + blockSize * 2 + 48, 15, -math.pi/2, game.points[1]/game.points[2]*math.pi - math.pi/2)
 
+        -- level
         love.graphics.setColor(1,1,1)
         love.graphics.setFont(fonts.gameplayDisplayHeader)
         love.graphics.print('LEVEL', rightDisplayX, boardY + blockSize * 2 + 70)
         love.graphics.setFont(fonts.gameplayDisplayNumbers)
         love.graphics.printf(game.level, rightDisplayX, boardY + blockSize * 2 + 96, 50, 'left')
+
+        -- grade
+        love.graphics.setColor(1,1,1)
+        love.graphics.setFont(fonts.gameplayDisplayHeader)
+        love.graphics.print('SECTION GRADE', rightDisplayX, boardY + blockSize * 2 + 118)
+        love.graphics.setFont(fonts.gameplayDisplayNumbers)
+        if game.points[1] > 0 then
+            -- print(game.gradePoints, game.points[1], game.gradePoints/game.points[1]*100)
+            love.graphics.printf(string.format('%.3f%%', game.gradePoints/game.points[1]*100), rightDisplayX, boardY + blockSize * 2 + 144, 100, 'left')
+        end
 
         -- lock delay/resets display
         love.graphics.setColor(1,1,1)
