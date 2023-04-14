@@ -134,7 +134,7 @@ return {
                 else return 0 end
             end,
             spawnDelay = function(level, points, maxPoints)
-                return 0.3 - level/(game.modeFields[game.mode].levels)*0.2
+                return 0.4 - level/game.modeFields[game.mode].levels*0.2
             end,
             lockDelay = function(level, points, maxPoints)
                     if level < 5 then return 0.5
@@ -142,7 +142,7 @@ return {
                 elseif level < 7 then return 0.4
                 elseif level < 8 then return 0.35
                 elseif level < 9 then return 0.3
-                else return 0.15 end
+                else return 0.2 end
             end,
             lineClearDelay = function(level, points, maxPoints)
                 return 0.3 - level/(game.modeFields[game.mode].levels)*0.2

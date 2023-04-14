@@ -416,8 +416,8 @@ function placeToGrid(piece)
         game.pps = 1/(love.timer.getTime()-game.lastPieceTime)
     end
     game.lastPieceTime = love.timer.getTime()
-    game.points[1] = game.points[1] + math.ceil(math.max(1, game.pps*2))
-    game.gradePoints = game.gradePoints + math.ceil(math.max(1, game.pps*2))
+    game.points[1] = game.points[1] + math.ceil(math.max(1, game.pps*2*(game.level/2+1)))
+    game.gradePoints = game.gradePoints + math.ceil(math.max(1, game.pps*2*(game.level/2+1)))
     -- level lock
     if game.points[1] >= game.points[2] then
         game.points[1] = game.points[2] - 1
@@ -460,8 +460,8 @@ function placeToGrid(piece)
         game.lines.lastClearTime = love.timer.getTime()
         game.lines.total = game.lines.total + #game.linesToClear
         game.lines.individual[math.min(#game.linesToClear, 5)] = game.lines.individual[math.min(#game.linesToClear, 5)] + 1
-        game.points[1] = game.points[1] + 2^(#game.linesToClear-1)
-        game.gradePoints = game.gradePoints + 2^(#game.linesToClear-1)
+        game.points[1] = game.points[1] + math.ceil(2^(#game.linesToClear-1)*(game.level/2+1))
+        game.gradePoints = game.gradePoints + math.ceil(2^(#game.linesToClear-1)*(game.level/2+1))
     end
 end
 
@@ -674,15 +674,17 @@ function love.draw()
 
         if game.currentPiece.active then
             -- ghost
-            local testPos = deepCopy(game.currentPiece.pos)
-            local testRot = game.currentPiece.orientation
-            while canPieceMove(testPos[1], testPos[2] + 1, testRot) do
-                testPos[2] = testPos[2] + 1
-            end
-            for y = 1, #game.pieces[game.currentPiece.id][testRot] do
-                for x = 1, #game.pieces[game.currentPiece.id][testRot][y] do
-                    if game.pieces[game.currentPiece.id][testRot][y][x] ~= ' ' then
-                        drawBlock(false, 'ghost', x + testPos[1], y + testPos[2], 0)
+            if game.gravityDelay[2] > 0 then
+                local testPos = deepCopy(game.currentPiece.pos)
+                local testRot = game.currentPiece.orientation
+                while canPieceMove(testPos[1], testPos[2] + 1, testRot) do
+                    testPos[2] = testPos[2] + 1
+                end
+                for y = 1, #game.pieces[game.currentPiece.id][testRot] do
+                    for x = 1, #game.pieces[game.currentPiece.id][testRot][y] do
+                        if game.pieces[game.currentPiece.id][testRot][y][x] ~= ' ' then
+                            drawBlock(false, 'ghost', x + testPos[1], y + testPos[2], 0)
+                        end
                     end
                 end
             end
@@ -787,7 +789,7 @@ function love.draw()
         love.graphics.setFont(fonts.gameplayDisplayNumbers)
         if game.points[1] > 0 then
             -- print(game.gradePoints, game.points[1], game.gradePoints/game.points[1]*100)
-            love.graphics.printf(string.format('%.3f%%', game.gradePoints/game.points[1]*100), rightDisplayX, boardY + blockSize * 2 + 144, 100, 'left')
+            love.graphics.printf(string.format('%.3f%%', math.min(100, game.gradePoints/game.points[1]*100)), rightDisplayX, boardY + blockSize * 2 + 144, 100, 'left')
         end
 
         -- lock delay/resets display
