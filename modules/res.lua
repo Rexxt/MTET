@@ -17,14 +17,14 @@ return {
             z = love.graphics.newImage("res/img/Z.png"),
         },
         medals = {
-            love.graphics.newImage("res/img/medals/F.png"),
-            love.graphics.newImage("res/img/medals/D.png"),
-            love.graphics.newImage("res/img/medals/C.png"),
-            love.graphics.newImage("res/img/medals/B.png"),
-            love.graphics.newImage("res/img/medals/A.png"),
-            love.graphics.newImage("res/img/medals/S.png"),
-            love.graphics.newImage("res/img/medals/M.png"),
-            love.graphics.newImage("res/img/medals/GM.png"),
+            F = love.graphics.newImage("res/img/medals/F.png"),
+            D = love.graphics.newImage("res/img/medals/D.png"),
+            C = love.graphics.newImage("res/img/medals/C.png"),
+            B = love.graphics.newImage("res/img/medals/B.png"),
+            A = love.graphics.newImage("res/img/medals/A.png"),
+            S = love.graphics.newImage("res/img/medals/S.png"),
+            M = love.graphics.newImage("res/img/medals/M.png"),
+            GM = love.graphics.newImage("res/img/medals/GM.png"),
         }
     },
     sounds = {

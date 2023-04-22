@@ -110,6 +110,16 @@ function deepCopy(t)
     return t2
 end
 
+function average(t)
+    local sum = 0
+    local len = 0
+    for k, v in pairs(t) do
+        sum = sum + v
+        len = len + 1
+    end
+    return sum/len
+end
+
 function canPieceMove(tx, ty, orientation)
     for y = 1, #game.pieces[game.currentPiece.id][orientation] do
         for x = 1, #game.pieces[game.currentPiece.id][orientation][y] do
@@ -493,6 +503,7 @@ function love.update(dt)
         
         -- grade
         game.gradePoints = math.max(game.gradePoints - (game.level+1)*dt/2, 0)
+        game.grades[game.level] = game.gradePoints/math.max(1, game.points[1])
 
         -- level
         game.points[2] = game.curves[game.mode].points[game.level + 1]
@@ -787,10 +798,18 @@ function love.draw()
         love.graphics.setFont(fonts.gameplayDisplayHeader)
         love.graphics.print('SECTION GRADE', rightDisplayX, boardY + blockSize * 2 + 118)
         love.graphics.setFont(fonts.gameplayDisplayNumbers)
-        if game.points[1] > 0 then
-            -- print(game.gradePoints, game.points[1], game.gradePoints/game.points[1]*100)
-            love.graphics.printf(string.format('%.3f%%', math.min(100, game.gradePoints/game.points[1]*100)), rightDisplayX, boardY + blockSize * 2 + 144, 100, 'left')
-        end
+        -- print(game.gradePoints, game.points[1], game.gradePoints/game.points[1]*100)
+        local grade = game.grades[game.level] and game.grades[game.level] or 0
+        local gl = game.gradeLetter(grade)
+        love.graphics.printf(string.format('%.3f%%', math.min(100, grade)*100), rightDisplayX + 100, boardY + blockSize * 2 + 144, 100, 'left')
+        love.graphics.draw(res.img.medals[gl], rightDisplayX, boardY + blockSize * 2 + 144, 0, 0.25)
+
+        love.graphics.setFont(fonts.gameplayDisplayHeader)
+        love.graphics.print('FINAL GRADE', rightDisplayX, boardY + blockSize * 2 + 300)
+        love.graphics.setFont(fonts.gameplayDisplayNumbers)
+        gl = game.gradeLetter(average(game.grades))
+        love.graphics.printf(string.format('%.3f%%', math.min(100, average(game.grades)*100)), rightDisplayX + 100, boardY + blockSize * 2 + 326, 100, 'left')
+        love.graphics.draw(res.img.medals[gl], rightDisplayX, boardY + blockSize * 2 + 326, 0, 0.25)
 
         -- lock delay/resets display
         love.graphics.setColor(1,1,1)

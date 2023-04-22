@@ -30,7 +30,18 @@ return {
     level = 0,
     levelLock = 0, -- pieces since level was locked
     points = {0, 200}, -- {current, required}
-    gradePoints = 0, -- grade points go up at the same time as points, but decrease at a rate of {(level+1)/2} points per second.
+    gradePoints = 0,
+    gradeLetter = function(gradePercent)
+            if gradePercent < 0.25 then return "F"
+        elseif gradePercent < 0.5  then return "D"
+        elseif gradePercent < 0.6  then return "C"
+        elseif gradePercent < 0.7  then return "B"
+        elseif gradePercent < 0.8  then return "A"
+        elseif gradePercent < 0.9  then return "S"
+        elseif gradePercent < 0.95 then return "M"
+        else return "GM" end
+    end,
+    grades = {},
     pieces = 0,
     lastPieceTime = 0,
     pps = 0,
